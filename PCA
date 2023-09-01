@@ -1,0 +1,72 @@
+import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+import matplotlib
+
+# Path to positive and negative review folders
+positive_folder = "aclImdb/train/pos"
+negative_folder = "aclImdb/train/neg"
+
+positive_reviews = []
+negative_reviews = []
+matplotlib.use('TkAgg')
+
+# Load positive reviews
+for filename in os.listdir(positive_folder):
+    with open(os.path.join(positive_folder, filename), "r", encoding="utf-8") as file:
+        positive_reviews.append(file.read())
+
+# Load negative reviews
+for filename in os.listdir(negative_folder):
+    with open(os.path.join(negative_folder, filename), "r", encoding="utf-8") as file:
+        negative_reviews.append(file.read())
+
+# Create labels
+labels = ['positive'] * len(positive_reviews) + ['negative'] * len(negative_reviews)
+
+# Combine reviews and labels
+data = list(zip(positive_reviews + negative_reviews, labels))
+
+
+# Preprocess the data
+corpus = [text for text, _ in data]
+
+# TF-IDF vectorization
+tfidf_vectorizer = TfidfVectorizer(max_features=1000, stop_words="english")
+features = tfidf_vectorizer.fit_transform(corpus).toarray()
+
+
+n_components = 2  # Choose the number of principal components
+pca = PCA(n_components=n_components)
+features_pca = pca.fit_transform(features)
+
+X_train, X_test, y_train, y_test = train_test_split(features_pca, labels, test_size=0.2, random_state=42)
+
+
+# Train a classifier
+clf = LogisticRegression()
+clf.fit(X_train, y_train)
+
+# Make predictions
+y_pred = clf.predict(X_test)
+
+# Evaluate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+colors = {'positive': 'green', 'negative': 'red'}
+plt.figure(figsize=(8, 6))
+
+for i, label in enumerate(labels):
+    plt.scatter(features_pca[i, 0], features_pca[i, 1], color=colors[label], label=label)
+
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.legend()
+plt.title("PCA Visualization")
+plt.show(block=True)
+
